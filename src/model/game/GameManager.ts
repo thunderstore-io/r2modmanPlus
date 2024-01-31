@@ -562,6 +562,12 @@ export default class GameManager {
             "https://thunderstore.io/c/sailwind/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
             [new StorePlatformMetadata(StorePlatform.STEAM, "1764530")], "Sailwind.png",
             GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.BEPINEX, []),
+
+        new Game("Phasmophobia", "Phasmophobia", "Phasmophobia",
+            "Phasmophobia", ["Phasmophobia.exe"], "Phasmophobia_Data",
+            "https://thunderstore.io/c/phasmophobia/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
+            [new StorePlatformMetadata(StorePlatform.STEAM, "739630")], "Phasmophobia.png",
+            GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.BEPINEX, []),
     ];
 
     static get activeGame(): Game {
