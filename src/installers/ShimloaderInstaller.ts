@@ -2,8 +2,8 @@ import { InstallArgs, PackageInstaller } from "./PackageInstaller";
 import path from "path";
 import FsProvider from "../providers/generic/file/FsProvider";
 import FileTree from "../model/file/FileTree";
-import FileUtils from "src/utils/FileUtils";
-import R2Error from "src/model/errors/R2Error";
+import FileUtils from "../utils/FileUtils";
+import R2Error from "../model/errors/R2Error";
 
 export class ShimloaderInstaller extends PackageInstaller {
     /**
