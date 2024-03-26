@@ -116,6 +116,14 @@ import Game from '../../model/game/Game';
 import GameManager from '../../model/game/GameManager';
 import ConflictManagementProvider from '../../providers/generic/installing/ConflictManagementProvider';
 
+interface DownloadProgress {
+    assignId: number;
+    initialMods: string[];
+    modName: string;
+    progress: number;
+    failed: boolean;
+}
+
 let assignId = 0;
 
     @Component({
@@ -126,12 +134,12 @@ let assignId = 0;
     export default class DownloadModModal extends Vue {
 
         versionNumbers: string[] = [];
-        downloadObject: any | null = null;
+        downloadObject: DownloadProgress | null = null;
         downloadingMod: boolean = false;
         selectedVersion: string | null = null;
         currentVersion: string | null = null;
 
-        static allVersions: [number, any][] = [];
+        static allVersions: [number, DownloadProgress][] = [];
 
         private activeGame!: Game;
         private contextProfile: Profile | null = null;
@@ -282,7 +290,7 @@ let assignId = 0;
                         assignId: currentAssignId,
                         failed: false,
                     }
-                    if (this.downloadObject.assignId === currentAssignId) {
+                    if (this.downloadObject!.assignId === currentAssignId) {
                         this.downloadObject = Object.assign({}, obj);
                     }
                     this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, obj]);
@@ -323,7 +331,7 @@ let assignId = 0;
                             assignId: currentAssignId,
                             failed: false,
                         }
-                        if (this.downloadObject.assignId === currentAssignId) {
+                        if (this.downloadObject!.assignId === currentAssignId) {
                             this.downloadObject = Object.assign({}, obj);
                         }
                         this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, obj]);
