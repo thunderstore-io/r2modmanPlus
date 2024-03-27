@@ -4,11 +4,17 @@
             <div class="modal-background" @click="downloadingMod = false;"></div>
             <div class='modal-content'>
                 <div class='notification is-info'>
-                    <h3 class='title'>Downloading {{downloadObject.modName}}</h3>
-                    <p>{{Math.floor(downloadObject.progress)}}% complete</p>
+                    <h3 class='title'>
+                        <template v-if='downloadObject.progress < 100'>Downloading {{downloadObject.modName}}</template>
+                        <template v-else>Installing {{installObject ? installObject.modName || '...' : '...'}}</template>
+                    </h3>
+                    <p class='columns indent-container'>
+                        <span class='column px-0'>Download {{Math.floor(downloadObject.progress)}}% complete</span>
+                        <span class='column px-0'>Install {{Math.floor(installObject ? installObject.progress : 0)}}% complete</span>
+                    </p>
                     <Progress
-                        :max='100'
-                        :value='downloadObject.progress'
+                        :max='200'
+                        :value='downloadObject.progress + (installObject ? installObject.progress : 0)'
                         :className="['is-dark']"
                     />
                 </div>
@@ -97,6 +103,12 @@
     </div>
 </template>
 
+<style lang="scss" scoped>
+    .indent-container {
+        margin: 0.5em;
+    }
+</style>
+
 <script lang="ts">
 
 import { Component, Vue, Watch } from 'vue-property-decorator';
@@ -124,7 +136,14 @@ interface DownloadProgress {
     failed: boolean;
 }
 
+interface InstallProgress {
+    installId: number;
+    modName: string;
+    progress: number;
+}
+
 let assignId = 0;
+let installId = 0;
 
     @Component({
         components: {
@@ -135,11 +154,13 @@ let assignId = 0;
 
         versionNumbers: string[] = [];
         downloadObject: DownloadProgress | null = null;
+        installObject: InstallProgress | null = null;
         downloadingMod: boolean = false;
         selectedVersion: string | null = null;
         currentVersion: string | null = null;
 
         static allDownloads: [number, DownloadProgress][] = [];
+        static allInstalls: [number, InstallProgress][] = [];
 
         private activeGame!: Game;
         private contextProfile: Profile | null = null;
@@ -264,12 +285,13 @@ let assignId = 0;
             const progressObject = {
                 progress: 0,
                 initialMods: outdatedMods.map(value => `${value.getName()} (${value.getVersionNumber().toString()})`),
-                modName: '',
+                modName: outdatedMods[0].getName(),
                 assignId: currentAssignId,
                 failed: false,
             };
             this.downloadObject = progressObject;
             DownloadModModal.allDownloads.push([currentAssignId, this.downloadObject]);
+            this.setDummyInstallProgress();
             this.downloadingMod = true;
             ThunderstoreDownloaderProvider.instance.downloadLatestOfAll(this.activeGame, outdatedMods, this.thunderstorePackages, (progress: number, modName: string, status: number, err: R2Error | null) => {
                 const assignIndex = DownloadModModal.allDownloads.findIndex(([number, val]) => number === currentAssignId);
@@ -304,12 +326,13 @@ let assignId = 0;
             const progressObject = {
                 progress: 0,
                 initialMods: [`${tsMod.getName()} (${tsVersion.getVersionNumber().toString()})`],
-                modName: '',
+                modName: tsMod.getName(),
                 assignId: currentAssignId,
                 failed: false,
             };
             this.downloadObject = progressObject;
             DownloadModModal.allDownloads.push([currentAssignId, this.downloadObject]);
+            this.setDummyInstallProgress();
             this.downloadingMod = true;
             setTimeout(() => {
                 ThunderstoreDownloaderProvider.instance.download(this.activeGame, this.contextProfile!, tsMod, tsVersion, this.thunderstorePackages, (progress: number, modName: string, status: number, err: R2Error | null) => {
@@ -340,9 +363,47 @@ let assignId = 0;
             }, 1);
         }
 
+        /**
+         * When the download progress modal is opened, replace the existing
+         * install progress object with dummy data to hide any progress made by
+         * a possible previous install process. The actual data is set when
+         * downloadCompleteCallback is called.
+         */
+        setDummyInstallProgress() {
+            this.installObject = {installId: -Infinity, modName: '', progress: 0};
+        }
+
         async downloadCompletedCallback(downloadedMods: ThunderstoreCombo[]) {
+            const currentInstallId = installId++;
+            const progressObject = {
+                installId: currentInstallId,
+                modName: downloadedMods[0].getMod().getName(),
+                progress: 0,
+            };
+            this.installObject = progressObject;
+            DownloadModModal.allInstalls.push([currentInstallId, progressObject]);
+            // TODO: might return -1
+            const installIndex = DownloadModModal.allInstalls.findIndex(([instId, ]) => instId === currentInstallId);
+
+            const updateProgress = (updated: InstallProgress) => {
+                // Update the list containing all installs processes.
+                this.$set(DownloadModModal.allInstalls, installIndex, [currentInstallId, updated]);
+
+                // If this install process is visible in the open
+                // progress modal, update it too.
+                if (this.installObject!.installId === currentInstallId) {
+                    this.installObject = updated;
+                }
+            };
+
             ProfileModList.requestLock(async () => {
                 for (const combo of downloadedMods) {
+                    let updated = {
+                        ...DownloadModModal.allInstalls[installIndex][1],
+                        modName: combo.getMod().getName()
+                    };
+                    updateProgress(updated);
+
                     try {
                         await DownloadModModal.installModAfterDownload(this.contextProfile!, combo.getMod(), combo.getVersion());
                     } catch (e) {
@@ -351,8 +412,18 @@ let assignId = 0;
                         this.$store.commit('error/handleError', err);
                         return;
                     }
+
+                    updateProgress({
+                        ...updated,
+                        progress: updated.progress + (1 / downloadedMods.length) * 100
+                    });
                 }
-                this.downloadingMod = false;
+
+                updateProgress({
+                    ...DownloadModModal.allInstalls[installIndex][1],
+                    progress: 100
+                });
+
                 const modList = await ProfileModList.getModList(this.contextProfile!);
                 if (!(modList instanceof R2Error)) {
                     await this.$store.dispatch('profile/updateModList', modList);
@@ -360,6 +431,10 @@ let assignId = 0;
                     if (err instanceof R2Error) {
                         this.$store.commit('error/handleError', err);
                     }
+                }
+
+                if (this.installObject!.installId === currentInstallId) {
+                    this.downloadingMod = false;
                 }
             });
         }
