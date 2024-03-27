@@ -59,9 +59,9 @@ export default class DownloadMonitor extends Vue {
     private activeDownloads: [number, any][] = [];
 
     created() {
-        this.activeDownloads = [...DownloadModModal.allVersions].reverse();
+        this.activeDownloads = [...DownloadModModal.allDownloads].reverse();
         this.refreshInterval = setInterval(() => {
-            this.activeDownloads = [...DownloadModModal.allVersions].reverse();
+            this.activeDownloads = [...DownloadModModal.allDownloads].reverse();
         }, 100);
     }
 

@@ -139,7 +139,7 @@ let assignId = 0;
         selectedVersion: string | null = null;
         currentVersion: string | null = null;
 
-        static allVersions: [number, DownloadProgress][] = [];
+        static allDownloads: [number, DownloadProgress][] = [];
 
         private activeGame!: Game;
         private contextProfile: Profile | null = null;
@@ -156,15 +156,15 @@ let assignId = 0;
                     assignId: currentAssignId,
                     failed: false,
                 };
-                DownloadModModal.allVersions.push([currentAssignId, progressObject]);
+                DownloadModModal.allDownloads.push([currentAssignId, progressObject]);
                 setTimeout(() => {
                     ThunderstoreDownloaderProvider.instance.download(game, profile, tsMod, tsVersion, thunderstorePackages, (progress: number, modName: string, status: number, err: R2Error | null) => {
-                        const assignIndex = DownloadModModal.allVersions.findIndex(([number, val]) => number === currentAssignId);
+                        const assignIndex = DownloadModModal.allDownloads.findIndex(([number, val]) => number === currentAssignId);
                         if (status === StatusEnum.FAILURE) {
                             if (err !== null) {
-                                const existing = DownloadModModal.allVersions[assignIndex]
+                                const existing = DownloadModModal.allDownloads[assignIndex]
                                 existing[1].failed = true;
-                                DownloadModModal.allVersions[assignIndex] = [currentAssignId, existing[1]];
+                                DownloadModModal.allDownloads[assignIndex] = [currentAssignId, existing[1]];
                                 return reject(err);
                             }
                         } else if (status === StatusEnum.PENDING) {
@@ -175,7 +175,7 @@ let assignId = 0;
                                 assignId: currentAssignId,
                                 failed: false,
                             }
-                            DownloadModModal.allVersions[assignIndex] = [currentAssignId, obj];
+                            DownloadModModal.allDownloads[assignIndex] = [currentAssignId, obj];
                         }
                     }, async (downloadedMods: ThunderstoreCombo[]) => {
                         ProfileModList.requestLock(async () => {
@@ -269,16 +269,16 @@ let assignId = 0;
                 failed: false,
             };
             this.downloadObject = progressObject;
-            DownloadModModal.allVersions.push([currentAssignId, this.downloadObject]);
+            DownloadModModal.allDownloads.push([currentAssignId, this.downloadObject]);
             this.downloadingMod = true;
             ThunderstoreDownloaderProvider.instance.downloadLatestOfAll(this.activeGame, outdatedMods, this.thunderstorePackages, (progress: number, modName: string, status: number, err: R2Error | null) => {
-                const assignIndex = DownloadModModal.allVersions.findIndex(([number, val]) => number === currentAssignId);
+                const assignIndex = DownloadModModal.allDownloads.findIndex(([number, val]) => number === currentAssignId);
                 if (status === StatusEnum.FAILURE) {
                     if (err !== null) {
                         this.downloadingMod = false;
-                        const existing = DownloadModModal.allVersions[assignIndex]
+                        const existing = DownloadModModal.allDownloads[assignIndex]
                         existing[1].failed = true;
-                        this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, existing[1]]);
+                        this.$set(DownloadModModal.allDownloads, assignIndex, [currentAssignId, existing[1]]);
                         this.$store.commit('error/handleError', err);
                         return;
                     }
@@ -293,7 +293,7 @@ let assignId = 0;
                     if (this.downloadObject!.assignId === currentAssignId) {
                         this.downloadObject = Object.assign({}, obj);
                     }
-                    this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, obj]);
+                    this.$set(DownloadModModal.allDownloads, assignIndex, [currentAssignId, obj]);
                 }
             }, this.downloadCompletedCallback);
         }
@@ -309,17 +309,17 @@ let assignId = 0;
                 failed: false,
             };
             this.downloadObject = progressObject;
-            DownloadModModal.allVersions.push([currentAssignId, this.downloadObject]);
+            DownloadModModal.allDownloads.push([currentAssignId, this.downloadObject]);
             this.downloadingMod = true;
             setTimeout(() => {
                 ThunderstoreDownloaderProvider.instance.download(this.activeGame, this.contextProfile!, tsMod, tsVersion, this.thunderstorePackages, (progress: number, modName: string, status: number, err: R2Error | null) => {
-                    const assignIndex = DownloadModModal.allVersions.findIndex(([number, val]) => number === currentAssignId);
+                    const assignIndex = DownloadModModal.allDownloads.findIndex(([number, val]) => number === currentAssignId);
                     if (status === StatusEnum.FAILURE) {
                         if (err !== null) {
                             this.downloadingMod = false;
-                            const existing = DownloadModModal.allVersions[assignIndex]
+                            const existing = DownloadModModal.allDownloads[assignIndex]
                             existing[1].failed = true;
-                            this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, existing[1]]);
+                            this.$set(DownloadModModal.allDownloads, assignIndex, [currentAssignId, existing[1]]);
                             this.$store.commit('error/handleError', err);
                             return;
                         }
@@ -334,7 +334,7 @@ let assignId = 0;
                         if (this.downloadObject!.assignId === currentAssignId) {
                             this.downloadObject = Object.assign({}, obj);
                         }
-                        this.$set(DownloadModModal.allVersions, assignIndex, [currentAssignId, obj]);
+                        this.$set(DownloadModModal.allDownloads, assignIndex, [currentAssignId, obj]);
                     }
                 }, this.downloadCompletedCallback);
             }, 1);
